@@ -1,0 +1,58 @@
+const mysql = require('mysql2/promise');
+
+exports.handler = async (event, context) => {
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+
+    if (event.httpMethod !== 'GET') {
+        return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+    }
+    
+    const searchTerm = event.queryStringParameters?.q;
+    
+    if (!searchTerm) {
+        return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Search term required' })
+        };
+    }
+    
+    let connection;
+    
+    try {
+        connection = await mysql.createConnection({
+            host: process.env.DB_HOST,
+            port: process.env.DB_PORT,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
+            ssl: {
+                ca: process.env.DB_CA_CERT.replace(/\\n/g, '\n'),
+                rejectUnauthorized: true
+            }
+        });
+        
+        const [rows] = await connection.execute(
+            `SELECT product_id, product_name, category, price, stock_quantity 
+             FROM products 
+             WHERE (product_name LIKE ? OR category LIKE ?) AND status = 'Active'`,
+            [`%${searchTerm}%`, `%${searchTerm}%`]
+        );
+        
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify(rows)
+        };
+    } catch (error) {
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: 'Search failed' })
+        };
+    } finally {
+        if (connection) await connection.end();
+    }
+};
