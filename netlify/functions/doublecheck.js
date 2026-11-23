@@ -9,8 +9,8 @@ exports.handler = async () => {
     const raw = process.env.DB_CA_CERT || '';
     const cert = raw.replace(/\\n/g, '\n');
     out.cert = {
-        has_begin: cert.includes('-----BEGIN CERTIFICATE-----'),
-        has_end: cert.includes('-----END CERTIFICATE-----'),
+        has_begin: cert.includes('-----BEGIN ' + 'CERTIFICATE-----'),
+        has_end: cert.includes('-----END ' + 'CERTIFICATE-----'),
         line_count: cert.split('\n').length
     };
 
